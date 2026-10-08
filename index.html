@@ -8,14 +8,7 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
-        @media print {
-            .no-print { display: none !important; }
-            .shadow-md { box-shadow: none !important; }
-            body { background-color: white; }
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body class="text-gray-800">
     <div id="app" class="max-w-4xl mx-auto p-4 md:p-8">
@@ -35,7 +28,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 border-b pb-8">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Название поездки</label>
-                    <input v-model="tripName" type="text" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-lg font-semibold p-2 border" placeholder="Евротур 2026">
+                    <input v-model="tripName" type="text" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-lg font-semibold p-2 border" placeholder="Например: Евротур">
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -51,6 +44,64 @@
                             <option value="¥">CNY (¥)</option>
                             <option value="฿">THB (฿)</option>
                         </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Global Transport Expenses -->
+            <div class="mb-10 bg-blue-50 rounded-lg p-6 border border-blue-100">
+                <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                    <i class="fa-solid fa-ticket text-blue-500 mr-2"></i>Транспорт (Билеты, перелеты)
+                </h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-gray-600 mb-4">
+                        <thead class="text-xs text-gray-700 uppercase bg-blue-100 rounded-t-md">
+                            <tr>
+                                <th scope="col" class="px-4 py-3 rounded-tl-md">Маршрут / Билет</th>
+                                <th scope="col" class="px-4 py-3">Тип транспорта</th>
+                                <th scope="col" class="px-4 py-3 w-32">Сумма</th>
+                                <th scope="col" class="px-4 py-3 w-10 no-print rounded-tr-md"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="expense in transportExpenses" :key="expense.id" class="border-b bg-white">
+                                <td class="px-4 py-2">
+                                    <input v-model="expense.name" type="text" class="w-full border-gray-200 rounded p-1 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500" placeholder="Напр. Москва - Стамбул">
+                                </td>
+                                <td class="px-4 py-2">
+                                    <div class="flex items-center space-x-2">
+                                        <select v-if="!expense.isCustomCategory" v-model="expense.category" class="w-full border-gray-200 rounded p-1 text-sm focus:border-blue-500 bg-white">
+                                            <option>Авиабилеты</option>
+                                            <option>Поезд</option>
+                                            <option>Автобус</option>
+                                            <option>Аренда авто</option>
+                                            <option>Паром / Лодка</option>
+                                        </select>
+                                        <input v-else v-model="expense.category" type="text" class="w-full border-gray-200 rounded p-1 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500" placeholder="Свой вариант">
+                                        <button @click="expense.isCustomCategory = !expense.isCustomCategory" class="text-gray-400 hover:text-blue-600 text-xs no-print" title="Свой вариант">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-2 flex items-center">
+                                    <input v-model.number="expense.amount" type="number" min="0" class="w-full border-gray-200 rounded p-1 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-right">
+                                    <span class="ml-2 font-medium">{{ currency }}</span>
+                                </td>
+                                <td class="px-4 py-2 no-print text-center">
+                                    <button @click="removeTransport(expense.id)" class="text-gray-400 hover:text-red-500">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="flex justify-between items-center mt-2">
+                    <button @click="addTransport" class="text-blue-600 hover:text-blue-800 text-sm font-medium no-print">
+                        <i class="fa-solid fa-plus mr-1"></i> Добавить билет
+                    </button>
+                    <div class="text-sm font-semibold text-gray-700">
+                        Итого по транспорту: {{ transportTotalNum.toLocaleString() }} {{ currency }}
                     </div>
                 </div>
             </div>
@@ -72,7 +123,7 @@
                     <iframe :src="`https://maps.google.com/maps?q=${encodeURIComponent(dest.name)}&t=&z=11&ie=UTF8&iwloc=&output=embed`" width="100%" height="200" frameborder="0" style="border:0" allowfullscreen></iframe>
                 </div>
 
-                <!-- Expenses for Destination -->
+                <!-- Expenses -->
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm text-gray-600 mb-4">
                         <thead class="text-xs text-gray-700 uppercase bg-gray-200 rounded-t-md">
@@ -86,13 +137,13 @@
                         <tbody>
                             <tr v-for="expense in dest.expenses" :key="expense.id" class="border-b bg-white">
                                 <td class="px-4 py-2">
-                                    <input v-model="expense.name" type="text" class="w-full border-gray-200 rounded p-1 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" placeholder="Название (напр. Отель Hilton)">
+                                    <input v-model="expense.name" type="text" class="w-full border-gray-200 rounded p-1 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" placeholder="Название (напр. Отель)">
                                 </td>
                                 <td class="px-4 py-2">
                                     <div class="flex items-center space-x-2">
                                         <select v-if="!expense.isCustomCategory" v-model="expense.category" class="w-full border-gray-200 rounded p-1 text-sm focus:border-indigo-500 bg-white">
                                             <option>Жилье</option>
-                                            <option>Транспорт</option>
+                                            <option>Общественный транспорт</option>
                                             <option>Еда и рестораны</option>
                                             <option>Виза / Документы</option>
                                             <option>Шоппинг</option>
@@ -144,85 +195,6 @@
         </div>
     </div>
 
-    <script>
-        const { createApp, ref, computed } = Vue;
-
-        createApp({
-            setup() {
-                const tripName = ref('');
-                const dates = ref('');
-                const currency = ref('$');
-                const destinations = ref([
-                    {
-                        id: 1,
-                        name: '',
-                        dates: '',
-                        expenses: [
-                            { id: 101, name: '', category: 'Виза / Документы', amount: null, isCustomCategory: false },
-                            { id: 102, name: '', category: 'Жилье', amount: null, isCustomCategory: false }
-                        ]
-                    }
-                ]);
-
-                const addDestination = () => {
-                    destinations.value.push({
-                        id: Date.now(),
-                        name: '',
-                        dates: '',
-                        expenses: [
-                            { id: Date.now() + 1, name: '', category: 'Жилье', amount: null, isCustomCategory: false }
-                        ]
-                    });
-                };
-
-                const removeDestination = (id) => {
-                    destinations.value = destinations.value.filter(d => d.id !== id);
-                };
-
-                const addExpense = (destId) => {
-                    const dest = destinations.value.find(d => d.id === destId);
-                    if (dest) {
-                        dest.expenses.push({ id: Date.now(), name: '', category: 'Еда и рестораны', amount: null, isCustomCategory: false });
-                    }
-                };
-
-                const removeExpense = (destId, expId) => {
-                    const dest = destinations.value.find(d => d.id === destId);
-                    if (dest) {
-                        dest.expenses = dest.expenses.filter(e => e.id !== expId);
-                    }
-                };
-
-                const destTotal = (dest) => {
-                    return dest.expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0).toLocaleString();
-                };
-
-                const grandTotal = computed(() => {
-                    const total = destinations.value.reduce((sum, dest) => {
-                        return sum + dest.expenses.reduce((s, exp) => s + (exp.amount || 0), 0);
-                    }, 0);
-                    return total.toLocaleString();
-                });
-
-                const exportPDF = () => {
-                    const element = document.getElementById('export-area');
-                    const opt = {
-                        margin:       0.5,
-                        filename:     'travel_budget.pdf',
-                        image:        { type: 'jpeg', quality: 0.98 },
-                        html2canvas:  { scale: 2, useCORS: true },
-                        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
-                    };
-                    html2pdf().set(opt).from(element).save();
-                };
-
-                return {
-                    tripName, dates, currency, destinations,
-                    addDestination, removeDestination, addExpense, removeExpense,
-                    destTotal, grandTotal, exportPDF
-                };
-            }
-        }).mount('#app');
-    </script>
+    <script src="app.js"></script>
 </body>
 </html>
